@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from './context/AuthContext';
+import { apiUrl } from '../api';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -15,7 +16,7 @@ const Login = () => {
     setError(null);
 
     try {
-      const response = await axios.post('/api/auth/login', { email, password });
+      const response = await axios.post(apiUrl('/api/auth/login'), { email, password });
       login(response.data.token);
       navigate('/');
     } catch (err) {
@@ -50,7 +51,7 @@ const Login = () => {
         <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-850/80 bg-gray-800 shadow-xl p-8">
           <div className="mb-6 text-center">
             <h2 className="text-2xl font-bold text-white">Sign in to your account</h2>
-            <p className="mt-1 text-sm text-gray-400">Or <a href="/signup" className="text-brand hover:text-brand-dark font-medium">create a new account</a></p>
+            <p className="mt-1 text-sm text-gray-400">Or <a href="#/signup" className="text-brand hover:text-brand-dark font-medium">create a new account</a></p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">

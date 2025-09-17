@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import axios from 'axios';
+import { apiUrl } from '../api';
 
 function Signup() {
   const navigate = useNavigate();
@@ -32,10 +34,14 @@ function Signup() {
     if (!validate()) return;
     setSubmitting(true);
     try {
-      // TODO: integrate API call when backend is ready
-      // await axios.post('/api/auth/signup', form)
-      await new Promise((r) => setTimeout(r, 600));
+      await axios.post(apiUrl('/api/auth/signup'), {
+        username: form.name,
+        email: form.email,
+        password: form.password,
+      });
       navigate('/login');
+    } catch (err) {
+      setErrors({ submit: err?.response?.data?.message || 'Signup failed. Try again.' });
     } finally {
       setSubmitting(false);
     }
@@ -72,7 +78,7 @@ function Signup() {
           <form onSubmit={handleSubmit} className="w-full max-w-md rounded-3xl border border-gray-800 bg-gray-900 p-8 shadow-2xl">
             <div className="mb-6 text-center">
               <h2 className="text-2xl font-bold">Create your account</h2>
-              <p className="mt-1 text-sm text-gray-400">Or <Link to="/login" className="text-brand hover:text-brand-dark font-medium">sign in to your account</Link></p>
+              <p className="mt-1 text-sm text-gray-400">Or <a href="#/login" className="text-brand hover:text-brand-dark font-medium">sign in to your account</a></p>
             </div>
 
             <div className="space-y-4">
@@ -101,6 +107,8 @@ function Signup() {
                 {errors.confirmPassword && <p className="mt-1 text-sm text-red-400">{errors.confirmPassword}</p>}
               </div>
             </div>
+
+            {errors.submit && <p className="mt-3 text-sm text-red-400 text-center">{errors.submit}</p>}
 
             <button type="submit" disabled={submitting}
               className="mt-6 w-full inline-flex justify-center items-center rounded-md bg-brand text-white px-4 py-2.5 font-semibold hover:bg-brand-dark transition disabled:opacity-60">
