@@ -1,0 +1,61 @@
+
+
+.Site-img{
+    height: 80px;
+    width: 200px;
+}
+
+.nav-item {
+    margin-right:20px;
+}
+.nav-link:hover{
+    font-size: larger;
+    text-shadow: 3px;
+    text-decoration: underline;
+    color: #000000;
+}
+
+#navbarSupportedContent {
+    margin-left: 200px;
+}
+
+#img-size{
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    z-index: 1;
+}
+
+#overrelay {
+    z-index: 2;
+}
+.gap-concard{
+    margin-top: 40px;
+}
+
+.wrapper {
+    background-color: bisque;
+    padding-bottom: 40px;
+
+}
+
+.card {
+    max-width: 540px;
+}
+
+/* container 2 */
+.contain{
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20 0 0 40px;
+}
+
+.card {
+    width :75%;
+
+}
+.head {
+    padding-top: 20px;
+}
