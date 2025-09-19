@@ -1,127 +1,140 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
-import { apiUrl } from '../api';
+import React, { useState, useContext } from 'react';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
+import { AuthContext } from './context/AuthContext';
+import { api } from '../utils/api';
 
-function Signup() {
+const Signup = () => {
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { login, isAuthenticated, loading } = useContext(AuthContext);
 
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  });
-  const [errors, setErrors] = useState({});
-  const [submitting, setSubmitting] = useState(false);
+  // Show loading while checking auth status
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const validate = () => {
-    const nextErrors = {};
-    if (!form.name.trim()) nextErrors.name = 'Full name is required';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) nextErrors.email = 'Enter a valid email address';
-    if (form.password.length < 8) nextErrors.password = 'Password must be at least 8 characters';
-    if (form.password !== form.confirmPassword) nextErrors.confirmPassword = 'Passwords do not match';
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
+  // Redirect if already authenticated
+  if (isAuthenticated()) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validate()) return;
-    setSubmitting(true);
+    setError(null);
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     try {
-      await axios.post(apiUrl('/api/auth/signup'), {
-        username: form.name,
-        email: form.email,
-        password: form.password,
+      const response = await api.post('/api/auth/signup', {
+        username,
+        email,
+        password,
       });
-      navigate('/login');
+      await login(response.data.token);
+      window.location.hash = '#/';
     } catch (err) {
-      setErrors({ submit: err?.response?.data?.message || 'Signup failed. Try again.' });
-    } finally {
-      setSubmitting(false);
+      setError(err.response?.data?.message || 'Signup failed. Please try again.');
     }
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-gray-900 via-gray-900 to-black text-gray-100">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 px-4 sm:px-6 lg:px-8 py-10">
-        {/* Left brand hero */}
-        <div className="hidden lg:flex relative items-center justify-center overflow-hidden rounded-3xl border border-gray-800 bg-gradient-to-br from-gray-800/80 to-gray-900/60">
-          <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_20%_20%,white,transparent_35%),radial-gradient(circle_at_80%_0%,white,transparent_35%),radial-gradient(circle_at_50%_80%,white,transparent_35%)]" />
-          <div className="relative z-10 max-w-lg p-12 text-center">
-            <h1 className="text-4xl font-extrabold tracking-tight">Welcome to UF XRAY</h1>
-            <p className="mt-4 text-lg text-gray-300">Securely scan files and URLs powered by modern detection techniques.</p>
-            <div className="mt-8 grid grid-cols-3 gap-4 text-sm text-left">
-              <div className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
-                <div className="text-brand font-semibold">Real-time</div>
-                <div className="text-gray-400">Fast, reliable scanning engine.</div>
-              </div>
-              <div className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
-                <div className="text-brand font-semibold">Privacy</div>
-                <div className="text-gray-400">Data handled with care.</div>
-              </div>
-              <div className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
-                <div className="text-brand font-semibold">Reports</div>
-                <div className="text-gray-400">Detailed, exportable results.</div>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-[calc(100vh-4rem)] flex items-stretch bg-gray-900">
+      {/* Left brand panel */}
+      <div className="hidden lg:flex w-1/2 relative items-center justify-center overflow-hidden bg-gradient-to-br from-gray-800 to-black text-white">
+        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_20%_20%,white,transparent_40%),radial-gradient(circle_at_80%_0%,white,transparent_40%)]" />
+        <div className="relative z-10 max-w-md px-8 text-center">
+          <h1 className="text-4xl font-extrabold tracking-tight">Welcome to UF XRAY</h1>
+          <p className="mt-4 text-white/80">
+            Securely scan files and URLs powered by modern detection techniques.
+          </p>
         </div>
+      </div>
 
-        {/* Right form card */}
-        <div className="flex items-center justify-center">
-          <form onSubmit={handleSubmit} className="w-full max-w-md rounded-3xl border border-gray-800 bg-gray-900 p-8 shadow-2xl">
-            <div className="mb-6 text-center">
-              <h2 className="text-2xl font-bold">Create your account</h2>
-              <p className="mt-1 text-sm text-gray-400">Or <a href="#/login" className="text-brand hover:text-brand-dark font-medium">sign in to your account</a></p>
+      {/* Right form panel */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center px-6 py-10 bg-gray-900">
+        <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-850/80 bg-gray-800 shadow-xl p-8">
+          <div className="mb-6 text-center">
+            <h2 className="text-2xl font-bold text-white">Create your account</h2>
+            <p className="mt-1 text-sm text-gray-400">
+              Or <Link to="/login" className="text-brand hover:text-brand-dark font-medium">sign in to your account</Link>
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="signup-username" className="block text-sm font-medium text-gray-200">Username</label>
+              <input
+                type="text"
+                id="signup-username"
+                className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900 text-gray-100 px-3 py-2 shadow-sm focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                autoComplete="username"
+              />
             </div>
-
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-200">Full Name</label>
-                <input id="name" name="name" type="text" value={form.name} onChange={handleChange}
-                  className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900 text-gray-100 px-3 py-2 shadow-sm focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none" />
-                {errors.name && <p className="mt-1 text-sm text-red-400">{errors.name}</p>}
-              </div>
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-200">Email</label>
-                <input id="email" name="email" type="email" value={form.email} onChange={handleChange}
-                  className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900 text-gray-100 px-3 py-2 shadow-sm focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none" />
-                {errors.email && <p className="mt-1 text-sm text-red-400">{errors.email}</p>}
-              </div>
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-200">Password</label>
-                <input id="password" name="password" type="password" value={form.password} onChange={handleChange}
-                  className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900 text-gray-100 px-3 py-2 shadow-sm focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none" />
-                {errors.password && <p className="mt-1 text-sm text-red-400">{errors.password}</p>}
-              </div>
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-200">Confirm Password</label>
-                <input id="confirmPassword" name="confirmPassword" type="password" value={form.confirmPassword} onChange={handleChange}
-                  className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900 text-gray-100 px-3 py-2 shadow-sm focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none" />
-                {errors.confirmPassword && <p className="mt-1 text-sm text-red-400">{errors.confirmPassword}</p>}
-              </div>
+            <div>
+              <label htmlFor="signup-email" className="block text-sm font-medium text-gray-200">Email</label>
+              <input
+                type="email"
+                id="signup-email"
+                className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900 text-gray-100 px-3 py-2 shadow-sm focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
             </div>
-
-            {errors.submit && <p className="mt-3 text-sm text-red-400 text-center">{errors.submit}</p>}
-
-            <button type="submit" disabled={submitting}
-              className="mt-6 w-full inline-flex justify-center items-center rounded-md bg-brand text-white px-4 py-2.5 font-semibold hover:bg-brand-dark transition disabled:opacity-60">
-              {submitting ? 'Creating account…' : 'Sign up'}
+            <div>
+              <label htmlFor="signup-password" className="block text-sm font-medium text-gray-200">Password</label>
+              <input
+                type="password"
+                id="signup-password"
+                className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900 text-gray-100 px-3 py-2 shadow-sm focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="new-password"
+              />
+            </div>
+            <div>
+              <label htmlFor="signup-confirm-password" className="block text-sm font-medium text-gray-200">Confirm Password</label>
+              <input
+                type="password"
+                id="signup-confirm-password"
+                className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900 text-gray-100 px-3 py-2 shadow-sm focus:border-brand focus:ring-2 focus:ring-brand/30 outline-none"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                autoComplete="new-password"
+              />
+            </div>
+            {error && <p className="text-sm text-red-400">{error}</p>}
+            <button
+              type="submit"
+              className="w-full inline-flex justify-center items-center rounded-md bg-brand text-white px-4 py-2.5 font-semibold hover:bg-brand-dark transition"
+            >
+              Sign up
             </button>
-
-            <div className="mt-6 text-center text-sm text-gray-400">
-              By signing up, you agree to our <a href="#" className="text-brand hover:text-brand-dark">Terms</a> and <a href="#" className="text-brand hover:text-brand-dark">Privacy Policy</a>.
-            </div>
           </form>
+
+          <div className="mt-6 text-center text-sm text-gray-400">
+            By signing up, you agree to our <a href="#" className="text-brand hover:text-brand-dark">Terms</a> and <a href="#" className="text-brand hover:text-brand-dark">Privacy Policy</a>.
+          </div>
         </div>
       </div>
     </div>
   );
-}
-export default Signup;
+};
+export default Signup;  

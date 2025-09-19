@@ -1,46 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { api } from '../utils/api';
 
 const Profile = () => {
   const [user, setUser] = useState(null);
   const [scans, setScans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-
-        const profileResponse = await axios.get('/api/users/profile', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const profileResponse = await api.get('/api/auth/profile');
         setUser(profileResponse.data);
 
-        const scansResponse = await axios.get('/api/scans/user', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setScans(scansResponse.data);
+        const reportsResponse = await api.get('/api/reports');
+        setScans(reportsResponse.data || []);
 
         setLoading(false);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to fetch profile or scans');
-        setLoading(false);
-        if (err.response?.status === 401) {
-          localStorage.removeItem('token');
-          navigate('/login');
+        if (err.response?.status !== 401) {
+          setError('Failed to fetch profile or scans');
         }
+        setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [navigate]);
+  }, []);
 
   if (loading) {
     return <div>Loading...</div>;
@@ -64,8 +50,7 @@ const Profile = () => {
       <ul>
         {scans.map((scan) => (
           <li key={scan._id}>
-            Scan ID: {scan._id}, Result: {scan.result}
-            {/* Add more scan details here */}
+            {scan.type.toUpperCase()} - {scan.target} - {new Date(scan.timestamp).toLocaleString()}
           </li>
         ))}
       </ul>

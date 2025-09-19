@@ -1,93 +1,243 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import './CSS/AnalyzeFile.css'; // Import your CSS file
+import React, { useState } from "react";
+import { api } from "../utils/api";
+import { downloadFileScanPDF } from "../utils/pdf";
 
-function FileUpload() {
+export default function AnalyzeFile() {
   const [selectedFile, setSelectedFile] = useState(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [uploadMessage, setUploadMessage] = useState('');
+  const [scanResults, setScanResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
 
-  const handleFileChange = (event) => setSelectedFile(event.target.files[0]);
+  const handleDownload = () => {
+    if (!scanResults) return;
+    const hint = scanResults.filename || selectedFile?.name || 'file-scan-report';
+    downloadFileScanPDF(scanResults, hint);
+  };
 
-  const handleUpload = async () => {
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setSelectedFile(file);
+    setScanResults(null);
+    setError(null);
+    setSuccess(null);
+  };
+
+  const handleScan = async () => {
     if (!selectedFile) {
-      setUploadMessage('Please select a file.');
+      setError("Please select a file to scan.");
       return;
     }
 
-    const formData = new FormData();
-    formData.append('file', selectedFile);
+    setLoading(true);
+    setError(null);
+    setScanResults(null);
+    setSuccess(null);
 
-    setIsScanning(true);
-    setUploadMessage('Scanning...');
+    const formData = new FormData();
+    formData.append("file", selectedFile);
 
     try {
-      await axios.post('/api/scan', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      setUploadMessage('Scan completed.');
-    } catch (error) {
-      console.error('Error scanning file:', error);
-      setUploadMessage('Error scanning file.');
+      console.log('Starting file scan for:', selectedFile.name);
+      const response = await api.post("/api/scan-file", formData, true);
+      console.log('File scan response:', response.data);
+      setScanResults(response.data);
+      setSuccess("File scan completed successfully! You can download the detailed report.");
+    } catch (err) {
+      console.error('File scan error:', err);
+      if (err.response?.status !== 401) {
+        setError(err.response?.data?.message || err.message || "Failed to scan file");
+      }
     } finally {
-      setIsScanning(false);
-      setSelectedFile(null); // Clear selected file
+      setLoading(false);
     }
   };
 
+  const getThreatColor = (isMalicious) => {
+    return isMalicious ? "text-red-600 bg-red-100" : "text-green-600 bg-green-100";
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900" id='bg-image'>
-      <div className="bg-white dark:bg-gray-900 dark:border dark:border-gray-800 bg-opacity-90 p-10 rounded-lg shadow-lg w-11/12 sm:w-4/5 md:w-2/3 lg:w-1/2 max-w-2xl">
-        <h1 className="text-3xl font-bold mb-6 text-center text-blue-600 dark:text-gray-100">
-          Upload File for Scanning
-        </h1>
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Choose a file
-          </label>
-          <div className="flex items-center justify-center w-full">
-            <label className="file-upload flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-blue-400 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition duration-200">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-12 w-12 text-blue-500 mb-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 4v8m0 0l-4-4m4 4l4-4m-8 8h8a2 2 0 002-2v-4m-2 6H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v4"
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 py-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            File Security Scanner
+          </h1>
+          <p className="text-lg text-gray-600">
+            Upload and analyze files for malware, suspicious content, and security threats
+          </p>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select File to Scan
+              </label>
+              <div className="flex items-center space-x-4">
+                <input
+                  type="file"
+                  onChange={handleFileChange}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
                 />
-              </svg>
-              <span className="text-gray-600 dark:text-gray-300">
-                {selectedFile ? selectedFile.name : 'Drag & drop your file here or click to select'}
-              </span>
-              <input
-                type="file"
-                accept=".txt,.pdf,.doc,.docx,.jpg,.png"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-            </label>
+                <button
+                  onClick={handleScan}
+                  disabled={loading || !selectedFile}
+                  className="px-8 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+                >
+                  {loading ? "Scanning..." : "Scan File"}
+                </button>
+              </div>
+            </div>
+
+
+            {selectedFile && (
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-semibold text-gray-900 mb-2">Selected File</h3>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">{selectedFile.name}</p>
+                    <p className="text-xs text-gray-500">{formatFileSize(selectedFile.size)}</p>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {selectedFile.type || "Unknown type"}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-700">{error}</p>
+              </div>
+            )}
+
+            {success && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-green-700">{success}</p>
+              </div>
+            )}
           </div>
         </div>
-        <button
-          onClick={handleUpload}
-          className="w-full bg-brand text-white font-semibold py-2 rounded-md hover:bg-brand-dark transition duration-200"
-          disabled={isScanning}
-        >
-          {isScanning ? "Scanning..." : "Scan File"}
-        </button>
-        {uploadMessage && (
-          <p className="mt-4 text-sm text-gray-700 dark:text-gray-300 text-center">
-            {uploadMessage}
-          </p>
+
+        {scanResults && (
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Scan Results</h2>
+              <div className="flex items-center gap-3">
+                <div className={`px-4 py-2 rounded-full text-sm font-medium ${getThreatColor(scanResults.malicious)}`}>
+                  {scanResults.malicious ? "MALICIOUS" : "SAFE"}
+                </div>
+                <button
+                  onClick={handleDownload}
+                  className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-medium transition-colors dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+                >
+                  Download Report
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-semibold text-gray-900 mb-2">File Information</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Filename:</span>
+                    <span className="font-medium">{scanResults.filename}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">SHA256:</span>
+                    <span className="font-mono text-xs">{scanResults.sha256}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-semibold text-gray-900 mb-2">Scan Status</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">YARA Scan:</span>
+                    <span className={scanResults.yara?.matches?.length > 0 ? "text-red-600" : "text-green-600"}>
+                      {scanResults.yara?.matches?.length > 0 ? "Threats Found" : "Clean"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">ClamAV:</span>
+                    <span className={scanResults.clamav?.status === 'infected' ? "text-red-600" : "text-green-600"}>
+                      {scanResults.clamav?.status === 'infected' ? "Infected" : "Clean"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {scanResults.yara?.matches && scanResults.yara.matches.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">YARA Rule Matches</h3>
+                <div className="space-y-2">
+                  {scanResults.yara.matches.map((match, index) => (
+                    <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <p className="text-sm font-medium text-red-800">{match}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {scanResults.pe_analysis && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">PE File Analysis</h3>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    {Object.entries(scanResults.pe_analysis).map(([key, value]) => (
+                      <div key={key} className="flex justify-between">
+                        <span className="text-gray-600 capitalize">{key.replace("_", " ")}:</span>
+                        <span className="font-medium">{String(value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {scanResults.strings_sample && scanResults.strings_sample.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Extracted Strings (Sample)</h3>
+                <div className="bg-gray-50 rounded-lg p-4 max-h-48 overflow-y-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {scanResults.strings_sample.slice(0, 20).map((str, index) => (
+                      <div key={index} className="text-xs font-mono text-gray-700 break-all">
+                        {str}
+                      </div>
+                    ))}
+                  </div>
+                  {scanResults.strings_sample.length > 20 && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      ... and {scanResults.strings_sample.length - 20} more strings
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h3 className="font-semibold text-gray-900 mb-2">Detailed Analysis</h3>
+              <pre className="text-xs text-gray-600 overflow-x-auto">
+                {JSON.stringify(scanResults, null, 2)}
+              </pre>
+            </div>
+          </div>
         )}
       </div>
     </div>
   );
 }
-
-export default FileUpload;

@@ -4,6 +4,11 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+// Normalize URL for HashRouter
+if (window.location.pathname !== '/' && window.location.hash) {
+  window.location.replace(window.location.origin + '/' + window.location.hash);
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>

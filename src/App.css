@@ -59,3 +59,37 @@
 .head {
     padding-top: 20px;
 }
+
+/* ---- News section readability overrides ---- */
+.news-section {
+  position: relative;
+}
+.news-section h2,
+.news-section h3 {
+  color: #111827 !important; /* gray-900 */
+}
+.news-section p,
+.news-section span {
+  color: #111827 !important; /* gray-900 */
+}
+.dark .news-section h2,
+.dark .news-section h3 {
+  color: #f9fafb !important; /* gray-50 */
+}
+.dark .news-section p,
+.dark .news-section span {
+  color: #e5e7eb !important; /* gray-200 */
+}
+.news-section article .p-5 {
+  background-color: #ffffff !important;
+}
+.dark .news-section article .p-5 {
+  background-color: #0b0f19 !important; /* deep gray for contrast */
+}
+
+/* Ensure no accidental translucency */
+.news-section,
+.news-section * {
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
+}

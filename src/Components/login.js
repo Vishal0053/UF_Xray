@@ -1,35 +1,52 @@
 import React, { useState, useContext } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { AuthContext } from './context/AuthContext';
-import { apiUrl } from '../api';
+import { api } from '../utils/api';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
   const [error, setError] = useState(null);
-  const { login } = useContext(AuthContext);
+  const { login, isAuthenticated, loading } = useContext(AuthContext);
+  
+  // Show loading while checking auth status
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+  
+  // Redirect if already authenticated
+  if (isAuthenticated()) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
 
     try {
-      const response = await axios.post(apiUrl('/api/auth/login'), { email, password });
-      login(response.data.token);
-      navigate('/');
+      console.log('[LOGIN] Attempting login...');
+      const response = await api.post('/api/auth/login', { email, password });
+      console.log('[LOGIN] Login response:', response.data);
+      console.log('[LOGIN] Token received:', response.data.token ? 'YES' : 'NO');
+      
+      await login(response.data.token, response.data.user);
+      
+      // Verify token was saved
+      const savedToken = localStorage.getItem('token');
+      console.log('[LOGIN] Token saved to localStorage:', savedToken ? 'YES' : 'NO');
+      
+      window.location.hash = '#/';
     } catch (err) {
-      if (err.response && err.response.data && err.response.data.message) {
-        if (err.response.data.message === 'Invalid credentials') {
-          setError('The email or password you entered is incorrect.');
-        } else {
-          setError(err.response.data.message);
-        }
+      if (err.response?.data?.message === 'Invalid credentials') {
+        setError('The email or password you entered is incorrect.');
       } else {
-        setError('Login failed. Please try again.');
+        setError(err.response?.data?.message || 'Login failed. Please try again.');
       }
-      console.error('Login error:', err);
     }
   };
 
@@ -51,7 +68,9 @@ const Login = () => {
         <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-850/80 bg-gray-800 shadow-xl p-8">
           <div className="mb-6 text-center">
             <h2 className="text-2xl font-bold text-white">Sign in to your account</h2>
-            <p className="mt-1 text-sm text-gray-400">Or <a href="#/signup" className="text-brand hover:text-brand-dark font-medium">create a new account</a></p>
+            <p className="mt-1 text-sm text-gray-400">
+              Or <Link to="/signup" className="text-brand hover:text-brand-dark font-medium">create a new account</Link>
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
