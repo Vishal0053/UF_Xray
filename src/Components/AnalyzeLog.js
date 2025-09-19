@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { api } from "../utils/api";
-import { downloadUrlScanPDF } from "../utils/pdf"; // placeholder if needed
 import { downloadJSON } from "../utils/download";
 import { downloadLogScanPDF } from "../utils/pdf";
 
