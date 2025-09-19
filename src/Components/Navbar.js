@@ -5,6 +5,7 @@ import '../App.css';
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScanOpen, setIsScanOpen] = useState(false);
+  const [isScanMobileOpen, setIsScanMobileOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
 
   useEffect(() => {
@@ -36,7 +37,10 @@ export default function Navbar() {
             <button
               aria-label="Toggle menu"
               className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onClick={() => {
+                if (isMenuOpen) setIsScanMobileOpen(false);
+                setIsMenuOpen(!isMenuOpen);
+              }}
             >
               {isMenuOpen ? '✖' : '☰'}
             </button>
@@ -87,12 +91,39 @@ export default function Navbar() {
                 <Link className="block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800" to="/" onClick={() => setIsMenuOpen(false)}>Home</Link>
               </li>
               <li className="mt-1">
-                <p className="px-2 text-xs uppercase tracking-wide text-gray-500">Scan</p>
-                <div className="mt-1 flex flex-col gap-1">
-                  <Link className="block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800" to="/AnalyzeFile" onClick={() => setIsMenuOpen(false)}>Analyze File</Link>
-                  <Link className="block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800" to="/AnalyzeURL" onClick={() => setIsMenuOpen(false)}>Analyze URL</Link>
-                  <Link className="block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800" to="/AnalyzeLog" onClick={() => setIsMenuOpen(false)}>Analyze Log</Link>
-                </div>
+                <button
+                  className="w-full flex items-center justify-between px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                  aria-expanded={isScanMobileOpen}
+                  onClick={() => setIsScanMobileOpen((v) => !v)}
+                >
+                  <span className="text-sm font-medium">Scan</span>
+                  <span className={`text-xs transition-transform ${isScanMobileOpen ? 'rotate-180' : ''}`}>▾</span>
+                </button>
+                {isScanMobileOpen && (
+                  <div className="mt-1 ml-2 flex flex-col gap-1">
+                    <Link
+                      className="block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                      to="/AnalyzeFile"
+                      onClick={() => { setIsScanMobileOpen(false); setIsMenuOpen(false); }}
+                    >
+                      Analyze File
+                    </Link>
+                    <Link
+                      className="block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                      to="/AnalyzeURL"
+                      onClick={() => { setIsScanMobileOpen(false); setIsMenuOpen(false); }}
+                    >
+                      Analyze URL
+                    </Link>
+                    <Link
+                      className="block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                      to="/AnalyzeLog"
+                      onClick={() => { setIsScanMobileOpen(false); setIsMenuOpen(false); }}
+                    >
+                      Analyze Log
+                    </Link>
+                  </div>
+                )}
               </li>
               <li>
                 <Link className="block px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800" to="/About" onClick={() => setIsMenuOpen(false)}>About Us</Link>
