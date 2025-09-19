@@ -4,6 +4,14 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+// Force light mode: remove any lingering dark theme class and stored theme preference
+try {
+  document.documentElement.classList.remove('dark');
+  if (localStorage.getItem('theme')) {
+    localStorage.removeItem('theme');
+  }
+} catch (_) {}
+
 // Normalize URL for HashRouter
 if (window.location.pathname !== '/' && window.location.hash) {
   window.location.replace(window.location.origin + '/' + window.location.hash);

@@ -66,15 +66,15 @@ export default function Container1() {
                     </div>
                 </div>
             </section>
-            <section id="news" className="news-section relative z-50 max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-black rounded-2xl opacity-100 isolate">
+            <section id="news" className="news-section relative z-50 max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8 bg-white rounded-2xl opacity-100 isolate">
                 <div className="mb-8 flex items-end justify-between gap-4">
                     <div>
-                        <h2 className="text-3xl font-extrabold text-black dark:text-white drop-shadow-md">Security News</h2>
-                        <p className="text-base text-gray-900 dark:text-white">Latest headlines from cybersecurity and threat intelligence.</p>
+                        <h2 className="text-3xl font-extrabold text-black drop-shadow-md">Security News</h2>
+                        <p className="text-base text-gray-900">Latest headlines from cybersecurity and threat intelligence.</p>
                     </div>
                     <div className="flex items-center gap-4">
-                      <Link to="/News" className="text-sm text-blue-700 dark:text-blue-400 hover:text-brand">View more</Link>
-                      <button onClick={fetchNews} className="text-blue-700 dark:text-blue-400 hover:text-brand-dark">{newsLoading ? 'Refreshing…' : 'Refresh'}</button>
+                      <Link to="/News" className="text-sm text-blue-700 hover:text-brand">View more</Link>
+                      <button onClick={fetchNews} className="text-blue-700 hover:text-brand-dark">{newsLoading ? 'Refreshing…' : 'Refresh'}</button>
                     </div>
                 </div>
                 {newsError && (
@@ -82,8 +82,8 @@ export default function Container1() {
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {(newsLoading && news.length === 0 ? Array.from({ length: 6 }) : news).map((item, idx) => (
-                        <article key={idx} className="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow hover:shadow-lg transition dark:bg-black dark:border-black dark:shadow-none text-black dark:text-white opacity-100 mix-blend-normal antialiased">
-                            <div className="aspect-video w-full bg-gray-100 dark:bg-black overflow-hidden -mb-px">
+                        <article key={idx} className="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow hover:shadow-lg transition text-black opacity-100 mix-blend-normal antialiased">
+                            <div className="aspect-video w-full bg-gray-100 overflow-hidden -mb-px">
                                 {item ? (
                                     <img
                                       src={item.imageUrl || 'https://source.unsplash.com/featured/800x450?cyber,security,hacking,news'}
@@ -92,18 +92,18 @@ export default function Container1() {
                                       onError={(e) => { e.currentTarget.src = 'https://source.unsplash.com/featured/800x450?cyber,security,hacking,news'; }}
                                     />
                                 ) : (
-                                    <div className="w-full h-full bg-gradient-to-br from-gray-100 to-white dark:from-black dark:to-black" />
+                                    <div className="w-full h-full bg-gradient-to-br from-gray-100 to-white" />
                                 )}
                             </div>
-                            <div className="p-5 bg-white text-black dark:bg-black dark:text-white mix-blend-normal">
-                                <h3 className="text-lg font-bold group-hover:text-brand transition text-black dark:text-white">
+                            <div className="p-5 bg-white text-black mix-blend-normal">
+                                <h3 className="text-lg font-bold group-hover:text-brand transition text-black">
                                     {newsLoading && !item ? 'Loading…' : (item?.title || '(no title)')}
                                 </h3>
-                                <p className="mt-2 text-[0.95rem] text-gray-900 dark:text-gray-200 line-clamp-3">
+                                <p className="mt-2 text-[0.95rem] text-gray-900 line-clamp-3">
                                     {newsLoading && !item ? 'Fetching latest security headlines…' : (item?.summary || '')}
                                 </p>
                                 <div className="mt-4 flex items-center justify-between mix-blend-normal">
-                                    <span className="text-xs font-medium text-gray-900 dark:text-gray-300">
+                                    <span className="text-xs font-medium text-gray-900">
                                         {newsLoading && !item ? '' : `${item?.source || ''} ${item?.publishedAt ? '· ' + new Date(item.publishedAt).toLocaleString() : ''}`}
                                     </span>
                                     {(!newsLoading && item?.link) ? (

@@ -35,6 +35,54 @@ app.get("/healthz", (req, res) => {
     res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
 });
 
+// Simple image proxy to avoid mixed-content (http) issues on HTTPS sites
+app.get('/api/news-image', (req, res) => {
+    try {
+        const src = req.query.src;
+        if (!src || typeof src !== 'string') {
+            return res.status(400).send('src query param required');
+        }
+        let target;
+        try { target = new URL(src); } catch { return res.status(400).send('invalid url'); }
+        if (target.protocol !== 'http:' && target.protocol !== 'https:') {
+            return res.status(400).send('unsupported protocol');
+        }
+        const client = target.protocol === 'http:' ? require('http') : require('https');
+
+        const request = client.get(target.toString(), {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36',
+                'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                'Referer': target.origin
+            },
+            timeout: 10000,
+        }, (r) => {
+            if (r.statusCode && r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) {
+                // Let browser follow redirect
+                res.setHeader('Cache-Control', 'public, max-age=86400');
+                return res.redirect(302, r.headers.location);
+            }
+            if (r.statusCode && r.statusCode >= 400) {
+                return res.status(502).send('bad upstream');
+            }
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            if (r.headers['content-type']) res.setHeader('Content-Type', r.headers['content-type']);
+            r.on('error', () => res.status(502).end());
+            r.pipe(res);
+        });
+
+        request.on('timeout', () => {
+            request.destroy();
+            res.status(504).send('timeout');
+        });
+        request.on('error', () => {
+            res.status(502).send('fetch error');
+        });
+    } catch (e) {
+        res.status(500).send('proxy error');
+    }
+});
+
 const PYTHON_BIN = process.env.PYTHON_BIN || "python"; // allow overriding python executable
 
 const upload = multer({ dest: "uploads/" });
