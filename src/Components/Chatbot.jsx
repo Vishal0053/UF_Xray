@@ -44,28 +44,42 @@ const Chatbot = () => {
 
   return (
     <>
-      {/* Floating toggle button */}
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-6 right-6 z-40 rounded-full bg-blue-600 text-white shadow-lg px-4 py-3 hover:bg-blue-700 transition-colors"
-        aria-label={open ? 'Close chatbot' : 'Open chatbot'}
-      >
-        {open ? 'Close Chat' : 'Chatbot'}
-      </button>
+      {/* Floating toggle button - hidden while chat is open */}
+      {!open && (
+        <button
+          onClick={() => setOpen(true)}
+          className="fixed z-[100] rounded-full bg-blue-600 text-white shadow-lg px-4 py-3 hover:bg-blue-700 transition-colors"
+          style={{
+            right: 'max(1rem, env(safe-area-inset-right))',
+            bottom: 'max(1rem, env(safe-area-inset-bottom))',
+          }}
+          aria-label="Open chatbot"
+        >
+          Chatbot
+        </button>
+      )}
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-24 right-6 z-40 w-96 max-w-[92vw] bg-white border border-gray-200 rounded-xl shadow-2xl flex flex-col overflow-hidden">
+        <div
+          className="fixed z-[100] bg-white border border-gray-200 rounded-xl shadow-2xl flex flex-col overflow-hidden"
+          style={{
+            right: 'max(1rem, env(safe-area-inset-right))',
+            bottom: 'max(1rem, env(safe-area-inset-bottom))',
+            width: 'min(92vw, 420px)',
+            maxHeight: 'min(75svh, 620px)'
+          }}
+        >
           <div className="px-4 py-3 bg-gray-100 border-b border-gray-200 flex items-center justify-between">
             <div className="font-semibold">UF XRay Cybersecurity Assistant</div>
-            <button onClick={() => setOpen(false)} className="text-gray-600 hover:text-gray-900">✕</button>
+            <button onClick={() => setOpen(false)} className="text-gray-600 hover:text-gray-900" aria-label="Close chatbot">✕</button>
           </div>
 
-          <div ref={listRef} className="p-3 h-80 overflow-y-auto space-y-3 bg-white">
+          <div ref={listRef} className="p-3 overflow-y-auto space-y-3 bg-white" style={{ minHeight: 240 }}>
             {messages.map((m, idx) => (
               <div key={idx} className={m.role === 'assistant' ? 'text-sm flex' : 'text-sm flex justify-end'}>
                 <div className={
-                  'px-3 py-2 rounded-lg max-w-[85%] whitespace-pre-wrap ' +
+                  'px-3 py-2 rounded-lg max-w-[85%] whitespace-pre-wrap break-words hyphens-auto ' +
                   (m.role === 'assistant' ? 'bg-gray-100 text-gray-900' : 'bg-blue-600 text-white')
                 }>
                   {m.content}

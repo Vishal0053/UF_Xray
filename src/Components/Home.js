@@ -34,10 +34,10 @@ export default function Container1() {
                     />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent dark:from-black/80 dark:via-black/60 z-0 pointer-events-none" />
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-4">
-                    <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white drop-shadow-xl">
+                    <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white drop-shadow-xl break-words wrap-anywhere">
                         Securing digital future by empowering security
                     </h1>
-                    <p className="text-lg sm:text-2xl mt-4 text-white/90 drop-shadow md:max-w-2xl">
+                    <p className="text-lg sm:text-2xl mt-4 text-white/90 drop-shadow md:max-w-2xl break-words wrap-anywhere">
                         Detect. Protect. Defend.
                     </p>
                     {/* Scan tiles */}
@@ -69,8 +69,8 @@ export default function Container1() {
             <section id="news" className="news-section relative z-50 max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8 bg-white rounded-2xl opacity-100 isolate">
                 <div className="mb-8 flex items-end justify-between gap-4">
                     <div>
-                        <h2 className="text-3xl font-extrabold text-black drop-shadow-md">Security News</h2>
-                        <p className="text-base text-gray-900">Latest headlines from cybersecurity and threat intelligence.</p>
+                        <h2 className="text-3xl font-extrabold text-black drop-shadow-md break-words wrap-anywhere">Security News</h2>
+                        <p className="text-base text-gray-900 break-words wrap-anywhere">Latest headlines from cybersecurity and threat intelligence.</p>
                     </div>
                     <div className="flex items-center gap-4">
                       <Link to="/News" className="text-sm text-blue-700 hover:text-brand">View more</Link>
@@ -98,10 +98,10 @@ export default function Container1() {
                                 )}
                             </div>
                             <div className="p-5 bg-white text-black mix-blend-normal">
-                                <h3 className="text-lg font-bold group-hover:text-brand transition text-black">
+                                <h3 className="text-lg font-bold group-hover:text-brand transition text-black break-words wrap-anywhere">
                                     {newsLoading && !item ? 'Loading…' : (item?.title || '(no title)')}
                                 </h3>
-                                <p className="mt-2 text-[0.95rem] text-gray-900 line-clamp-3">
+                                <p className="mt-2 text-[0.95rem] text-gray-900 line-clamp-3 break-words wrap-anywhere">
                                     {newsLoading && !item ? 'Fetching latest security headlines…' : (item?.summary || '')}
                                 </p>
                                 <div className="mt-4 flex items-center justify-between mix-blend-normal">

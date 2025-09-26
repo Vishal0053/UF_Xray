@@ -83,7 +83,7 @@ export default function AnalyzeFile() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Select File to Scan
               </label>
-              <div className="flex items-center space-x-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
                 <input
                   type="file"
                   onChange={handleFileChange}
@@ -103,12 +103,12 @@ export default function AnalyzeFile() {
             {selectedFile && (
               <div className="bg-gray-50 rounded-lg p-4">
                 <h3 className="font-semibold text-gray-900 mb-2">Selected File</h3>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">{selectedFile.name}</p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-700 break-words wrap-anywhere">{selectedFile.name}</p>
                     <p className="text-xs text-gray-500">{formatFileSize(selectedFile.size)}</p>
                   </div>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 truncate max-w-full">
                     {selectedFile.type || "Unknown type"}
                   </span>
                 </div>
@@ -150,13 +150,13 @@ export default function AnalyzeFile() {
               <div className="bg-gray-50 rounded-lg p-4">
                 <h3 className="font-semibold text-gray-900 mb-2">File Information</h3>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between gap-3">
                     <span className="text-gray-600">Filename:</span>
-                    <span className="font-medium">{scanResults.filename}</span>
+                    <span className="font-medium text-right break-words wrap-anywhere">{scanResults.filename}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between gap-3">
                     <span className="text-gray-600">SHA256:</span>
-                    <span className="font-mono text-xs">{scanResults.sha256}</span>
+                    <span className="font-mono text-xs break-all">{scanResults.sha256}</span>
                   </div>
                 </div>
               </div>

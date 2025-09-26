@@ -88,14 +88,14 @@ export default function AnalyzeURL() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Enter URL to Scan
               </label>
-              <div className="flex space-x-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <input
                   type="url"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="https://example.com"
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent break-all"
                 />
                 <button
                   onClick={handleScan}
