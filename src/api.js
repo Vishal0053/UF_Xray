@@ -93,3 +93,18 @@ export const apiClient = {
 };
 
 console.log('[API] Custom API client created with manual auth headers');
+
+// Chatbot helper
+export async function askCyberChat(message, history = []) {
+  const payload = {
+    message,
+    history: Array.isArray(history)
+      ? history.map((m) => ({ role: m.role, content: m.content }))
+      : []
+  };
+  const response = await axios.post(`${API_BASE_URL}/api/chat`, payload, {
+    headers: { 'Content-Type': 'application/json' },
+    timeout: 30000,
+  });
+  return response.data;
+}

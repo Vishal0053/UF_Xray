@@ -17,6 +17,13 @@ const { getNews } = require("./news");
 dotenv.config();
 
 const app = express();
+// Ensure global fetch is available (Node < 18 fallback)
+async function ensureFetch() {
+  if (typeof fetch === 'undefined') {
+    const mod = await import('node-fetch');
+    global.fetch = mod.default;
+  }
+}
 // Configure CORS (public, no credentials)
 app.use(cors({
   origin: '*',
@@ -280,6 +287,66 @@ app.get("/api/news", async (req, res) => {
 // Reports API removed in simplified backend
 
 // Legacy scan endpoint removed. Use /api/scan-url or /api/scan-file
+
+// Chatbot endpoint for cybersecurity Q&A
+app.post('/api/chat', async (req, res) => {
+    try {
+        await ensureFetch();
+        const { message, history } = req.body || {};
+        if (!message || typeof message !== 'string' || !message.trim()) {
+            return res.status(400).json({ message: "'message' is required" });
+        }
+
+        const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+        if (!OPENAI_API_KEY) {
+            return res.status(500).json({ message: "Server not configured with OPENAI_API_KEY" });
+        }
+
+        const systemPrompt = [
+            "You are 'UF XRay Assistant', a helpful cybersecurity expert.",
+            "Answer clearly and concisely, focusing on practical security guidance.",
+            "You can explain concepts like malware, phishing, network security, SIEM, log analysis, incident response, and secure coding.",
+            "Be safe and ethical. Do NOT provide instructions that facilitate wrongdoing (e.g., exploiting systems).",
+            "If the user asks for something unsafe, refuse and provide safer alternatives like defensive best practices.",
+        ].join(' ');
+
+        const chatHistory = Array.isArray(history) ? history.slice(-10) : [];
+        const messages = [
+            { role: 'system', content: systemPrompt },
+            ...chatHistory,
+            { role: 'user', content: String(message) }
+        ];
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            },
+            body: JSON.stringify({
+                model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+                messages,
+                temperature: 0.2,
+                max_tokens: 800
+            })
+        });
+
+        if (!response.ok) {
+            const text = await response.text().catch(() => '');
+            console.error('/api/chat upstream error:', response.status, text);
+            return res.status(502).json({ message: 'AI provider error', details: text });
+        }
+        const data = await response.json();
+        const answer = (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content)
+            ? data.choices[0].message.content.trim()
+            : "Sorry, I couldn't generate a response.";
+
+        return res.json({ answer });
+    } catch (err) {
+        console.error('/api/chat error:', err);
+        return res.status(500).json({ message: 'Unexpected error', details: String(err) });
+    }
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

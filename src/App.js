@@ -7,6 +7,7 @@ import AnalyzeLog from './Components/AnalyzeLog';
 import News from './Components/News';
 import About from './Components/About';
 import Contact from './Components/Contact';
+import Chatbot from './Components/Chatbot';
 
 import { HashRouter, Routes, Route } from "react-router-dom";
 
@@ -25,6 +26,7 @@ function App() {
           <Route path="/Contact" element={<Contact />} />
         </Routes>
       </div>
+      <Chatbot />
     </HashRouter>
   );
 }
