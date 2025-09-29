@@ -8,6 +8,9 @@ export default function Container1() {
     const [newsLoading, setNewsLoading] = useState(false);
     const [newsError, setNewsError] = useState(null);
     const FALLBACK_IMG = (process.env.PUBLIC_URL || '') + '/cyber-fallback.svg';
+    const [vulnSummary, setVulnSummary] = useState(null);
+    const [kevUpdatedAt, setKevUpdatedAt] = useState(null);
+    const [termLines, setTermLines] = useState([]);
 
     const resolveImage = (it) => {
         const raw = (it?.imageUrl || '').trim();
@@ -31,48 +34,84 @@ export default function Container1() {
         }
     };
 
+    const fetchVulnMeta = async () => {
+        try {
+            const [{ data: sum }, { data: kev }] = await Promise.all([
+                api.get('/api/vuln/summary').catch(() => ({ data: null })),
+                api.get('/api/vuln/known?limit=1').catch(() => ({ data: null })),
+            ]);
+            if (sum) setVulnSummary(sum);
+            if (kev?.updatedAt) setKevUpdatedAt(kev.updatedAt);
+        } catch (_) {
+            // silent fail for homepage cosmetics
+        }
+    };
+
     useEffect(() => {
         fetchNews();
+        fetchVulnMeta();
     }, []);
+
+    // Cyber terminal animation lines
+    useEffect(() => {
+        const kevStr = kevUpdatedAt ? new Date(kevUpdatedAt).toLocaleDateString() : '—';
+        const msgs = [
+          `[${new Date().toLocaleTimeString()}] ▶ UF‑Xray initialized`,
+          `[${new Date().toLocaleTimeString()}] ✓ Image proxy online`,
+          `[${new Date().toLocaleTimeString()}] ✓ Aggregated feeds: 4`,
+          `[${new Date().toLocaleTimeString()}] ✓ Headlines available: ${news?.length || 0}`,
+          `[${new Date().toLocaleTimeString()}] ✓ Found vulnerabilities: ${vulnSummary?.totalFound ?? 0}`,
+          `[${new Date().toLocaleTimeString()}] ✓ CISA KEV updated: ${kevStr}`,
+          `[${new Date().toLocaleTimeString()}] ▶ Ready for analysis...`
+        ];
+        let i = 0;
+        setTermLines([]);
+        const timer = setInterval(() => {
+            setTermLines(prev => {
+                const next = (i < msgs.length) ? msgs[i] : `[${new Date().toLocaleTimeString()}] ▷ Idle`;
+                i = Math.min(i + 1, msgs.length);
+                const arr = prev.length >= 8 ? [...prev.slice(-7), next] : [...prev, next];
+                return arr;
+            });
+        }, 1100);
+        return () => clearInterval(timer);
+    }, [vulnSummary?.totalFound, kevUpdatedAt, news?.length]);
 
     return (
         <>
             <section className="relative overflow-hidden z-0">
-                <img alt="A computer setup with multiple screens displaying code and data visualizations, with a colorful keyboard and other tech gadgets"
-                    className="w-full h-[520px] object-cover"
-                    src="https://static.sitemantic.com/webbuilder/templates/images/information-technology/information-technology-1170-570-1.jpg"
-                    />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent dark:from-black/80 dark:via-black/60 z-0 pointer-events-none" />
+                <img
+                  alt="A cyber-themed workstation with multiple security dashboards and code on screens"
+                  className="w-full h-[560px] object-cover"
+                  src="https://static.sitemantic.com/webbuilder/templates/images/information-technology/information-technology-1170-570-1.jpg"
+                />
+                {/* Cyber overlays */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent pointer-events-none" />
+                <div className="absolute inset-0 pointer-events-none"
+                     style={{ backgroundImage: 'radial-gradient(600px 200px at 20% 0%, rgba(59,130,246,0.25), transparent), radial-gradient(600px 200px at 80% 0%, rgba(14,165,233,0.25), transparent)'}} />
+                <div className="cyber-scanlines" />
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-4">
-                    <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white drop-shadow-xl break-words wrap-anywhere">
-                        Securing digital future by empowering security
+                    <h1 className="hero-title text-4xl sm:text-6xl font-extrabold tracking-tight text-white drop-shadow-[0_6px_12px_rgba(0,0,0,0.6)] break-words wrap-anywhere">
+                        <span className="text-sky-300">Defend</span> Your Digital Frontline
                     </h1>
-                    <p className="text-lg sm:text-2xl mt-4 text-white/90 drop-shadow md:max-w-2xl break-words wrap-anywhere">
-                        Detect. Protect. Defend.
+                    <p className="text-base sm:text-xl mt-4 text-white/90 md:max-w-3xl">
+                        Unified tools for threat intel, analysis, and response.
                     </p>
-                    {/* Scan tiles */}
-                    <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl">
-                      <Link to="/AnalyzeURL" className="group flex items-center gap-3 rounded-xl bg-white/90 dark:bg-white/10 backdrop-blur px-5 py-4 hover:bg-white dark:hover:bg-white/20 border border-white/40 dark:border-white/10 transition">
-                        <span className="text-2xl">🔗</span>
-                        <div className="text-left">
-                          <div className="font-semibold text-gray-900 dark:text-white">Analyze URL</div>
-                          <div className="text-sm text-gray-600 dark:text-gray-300">Liveness, patterns, risk</div>
-                        </div>
-                      </Link>
-                      <Link to="/AnalyzeFile" className="group flex items-center gap-3 rounded-xl bg-white/90 dark:bg-white/10 backdrop-blur px-5 py-4 hover:bg-white dark:hover:bg-white/20 border border-white/40 dark:border-white/10 transition">
-                        <span className="text-2xl">🗂️</span>
-                        <div className="text-left">
-                          <div className="font-semibold text-gray-900 dark:text-white">Analyze File</div>
-                          <div className="text-sm text-gray-600 dark:text-gray-300">YARA, AV, PE insights</div>
-                        </div>
-                      </Link>
-                      <Link to="/AnalyzeLog" className="group flex items-center gap-3 rounded-xl bg-white/90 dark:bg-white/10 backdrop-blur px-5 py-4 hover:bg-white dark:hover:bg-white/20 border border-white/40 dark:border-white/10 transition">
-                        <span className="text-2xl">📝</span>
-                        <div className="text-left">
-                          <div className="font-semibold text-gray-900 dark:text-white">Analyze Logs</div>
-                          <div className="text-sm text-gray-600 dark:text-gray-300">Errors, anomalies, risk</div>
-                        </div>
-                      </Link>
+                    {/* Cyber chips */}
+                    <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                      <span className="chip-cyber">🛡️ <span>Found vulns:</span> <strong>{vulnSummary?.totalFound ?? 0}</strong></span>
+                      <span className="chip-cyber">📅 <span>KEV:</span> <strong>{kevUpdatedAt ? new Date(kevUpdatedAt).toLocaleDateString() : '—'}</strong></span>
+                      <span className="chip-cyber">📰 <span>Headlines:</span> <strong>{news?.length || 0}</strong></span>
+                    </div>
+                    <div className="neon-divider" />
+                    {/* Terminal panel */}
+                    <div className="mt-6 w-full max-w-3xl">
+                      <div className="terminal-panel">
+                        <pre className="terminal-pre">
+{termLines.map((l, idx) => ` ${l}\n`).join('')}
+<span className="caret-blink">▋</span>
+                        </pre>
+                      </div>
                     </div>
                 </div>
             </section>

@@ -8,16 +8,56 @@ const fs = require("fs");
 const path = require("path");
 const dotenv = require("dotenv");
 const rateLimit = require('express-rate-limit');
+const nodemailer = require('nodemailer');
 const { getNews } = require("./news");
 // const authRoutes = require("./routes/auth");
 // const jwt = require("jsonwebtoken");
 // Reports persistence disabled for simplified backend
-// const Report = require("./models/Report");
 // const User = require('./models/User');
 
 dotenv.config();
 
 const app = express();
+// In-memory vulnerability store (ephemeral)
+const FOUND_VULNS_MAX = 500;
+let foundVulns = [];
+
+// Known vulnerabilities cache (CISA KEV)
+const KEV_TTL_MS = 12 * 60 * 60 * 1000; // 12h
+let kevCache = { items: [], fetchedAt: 0 };
+async function fetchCisaKEV() {
+  try {
+    await ensureFetch();
+    const url = process.env.KEV_FEED_URL || 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json';
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error(`KEV fetch failed ${res.status}`);
+    const json = await res.json();
+    const arr = Array.isArray(json?.vulnerabilities) ? json.vulnerabilities : [];
+    kevCache = { items: arr, fetchedAt: Date.now() };
+    return arr;
+  } catch (e) {
+    return kevCache.items || [];
+  }
+}
+
+function addFoundVuln(entry) {
+  try {
+    const now = new Date();
+    const norm = {
+      id: `${now.getTime()}_${Math.random().toString(36).slice(2,8)}`,
+      title: String(entry.title || 'Detected vulnerability/finding'),
+      type: String(entry.type || 'finding'),
+      severity: String(entry.severity || 'LOW'),
+      source: String(entry.source || 'unknown'),
+      reference: entry.reference || null,
+      details: entry.details || null,
+      timestamp: now.toISOString(),
+    };
+    foundVulns.unshift(norm);
+    if (foundVulns.length > FOUND_VULNS_MAX) foundVulns.length = FOUND_VULNS_MAX;
+  } catch (_) { /* ignore */ }
+}
+
 const FALLBACK_SVG = (
   `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'>`+
   `<rect width='800' height='450' fill='rgb(15,23,42)'/>`+
@@ -63,6 +103,149 @@ app.get("/", (req, res) => {
 
 app.get("/healthz", (req, res) => {
     res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+
+// ---------------- Contact (Email) ----------------
+// Basic string sanitization to avoid script injection in emails/logs
+function sanitizeStr(input, maxLen = 2000) {
+    let s = String(input || '').trim();
+    s = s.replace(/[\u0000-\u001F\u007F]/g, ''); // drop control chars
+    s = s.slice(0, maxLen);
+    // Escape angle brackets and ampersand
+    s = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return s;
+}
+
+const contactLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 5, // 5 requests/minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Lazy-create transporter so server starts without SMTP until first use
+let mailTransporter = null;
+async function getTransporter() {
+  if (mailTransporter) return mailTransporter;
+  const host = process.env.SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT || '587', 10);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!host || !user || !pass) {
+    throw new Error('SMTP not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS');
+  }
+  mailTransporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  });
+  return mailTransporter;
+}
+
+app.post('/api/contact', contactLimiter, async (req, res) => {
+  try {
+    const { name, email, phone, desc, website } = req.body || {};
+    // Honeypot: if filled, pretend success but drop
+    if (website && String(website).trim()) {
+      return res.json({ ok: true });
+    }
+    const nm = sanitizeStr(name, 120);
+    const em = sanitizeStr(email, 200);
+    const ph = sanitizeStr(phone, 40);
+    const msg = sanitizeStr(desc, 4000);
+
+    if (!nm || !em || !msg) {
+      return res.status(400).json({ message: 'name, email and message are required' });
+    }
+    // Basic email format check
+    if (!/^\S+@\S+\.\S+$/.test(em)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    const to = (process.env.CONTACT_TO && process.env.CONTACT_TO.trim()) || 'vishalhgiri@gmail.com';
+    const from = process.env.MAIL_FROM || process.env.SMTP_USER || 'no-reply@ufxray.local';
+
+    const transporter = await getTransporter();
+    const subject = `[UF-Xray] New contact form submission from ${nm}`;
+
+    // Plain text and safe HTML (escaped)
+    const text = `New contact message\n\nName: ${nm}\nEmail: ${em}\nPhone: ${ph}\n\nMessage:\n${msg}`;
+    const html = [
+      `<div style="font-family:Segoe UI,Roboto,Arial,sans-serif;font-size:14px;color:#111">`,
+      `<p><strong>Name:</strong> ${nm}</p>`,
+      `<p><strong>Email:</strong> ${em}</p>`,
+      ph ? `<p><strong>Phone:</strong> ${ph}</p>` : '',
+      `<hr style="border:none;border-top:1px solid #e5e7eb;margin:8px 0">`,
+      `<p style="white-space:pre-wrap">${msg}</p>`,
+      `</div>`
+    ].join('');
+
+    await transporter.sendMail({ from, to, subject, text, html });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('/api/contact error:', err);
+    return res.status(500).json({ message: 'Failed to send message' });
+  }
+});
+
+// Vulnerabilities: Known from CISA KEV
+app.get('/api/vuln/known', async (req, res) => {
+    try {
+        const limitRaw = req.query.limit || '50';
+        const limit = Math.max(1, Math.min(parseInt(limitRaw, 10) || 50, 500));
+        const q = String(req.query.q || '').toLowerCase();
+        const now = Date.now();
+        const needRefresh = (now - kevCache.fetchedAt) > KEV_TTL_MS || !Array.isArray(kevCache.items) || kevCache.items.length === 0;
+        const items = needRefresh ? await fetchCisaKEV() : kevCache.items;
+        const norm = (items || []).map((v) => ({
+            id: v.cveID || v.vulnID || v.id || null,
+            cve: v.cveID || null,
+            vendor: v.vendorProject || '',
+            product: v.product || '',
+            name: v.vulnerabilityName || '',
+            description: v.shortDescription || '',
+            dateAdded: v.dateAdded || null,
+            dueDate: v.dueDate || null,
+            requiredAction: v.requiredAction || '',
+            notes: v.notes || '',
+            references: v?.references || [],
+            severity: 'HIGH',
+            source: 'CISA KEV'
+        }));
+        const filtered = q
+            ? norm.filter(it => [it.id, it.cve, it.vendor, it.product, it.name, it.description].join(' ').toLowerCase().includes(q))
+            : norm;
+        return res.json({ items: filtered.slice(0, limit), total: filtered.length, updatedAt: new Date(kevCache.fetchedAt || now).toISOString() });
+    } catch (e) {
+        return res.status(500).json({ message: 'Failed to fetch known vulnerabilities' });
+    }
+});
+
+// Vulnerabilities: Found during scans (ephemeral in-memory)
+app.get('/api/vuln/found', (req, res) => {
+    try {
+        const limitRaw = req.query.limit || '100';
+        const limit = Math.max(1, Math.min(parseInt(limitRaw, 10) || 100, FOUND_VULNS_MAX));
+        return res.json({ items: foundVulns.slice(0, limit), total: foundVulns.length });
+    } catch (e) {
+        return res.status(500).json({ message: 'Failed to fetch found vulnerabilities' });
+    }
+});
+
+// Vulnerabilities summary
+app.get('/api/vuln/summary', (req, res) => {
+    try {
+        const bySeverity = foundVulns.reduce((acc, it) => {
+            const k = (it.severity || 'LOW').toUpperCase();
+            acc[k] = (acc[k] || 0) + 1;
+            return acc;
+        }, {});
+        const latest = foundVulns[0]?.timestamp || null;
+        res.json({ totalFound: foundVulns.length, bySeverity, latest });
+    } catch (e) {
+        res.status(500).json({ message: 'Failed to summarize vulnerabilities' });
+    }
 });
 
 // Simple image proxy to avoid mixed-content (http) issues on HTTPS sites
@@ -172,6 +355,23 @@ app.post("/api/scan-url", async (req, res) => {
             try {
                 const scanResult = JSON.parse(scriptOutput);
                 // Skipping DB save in simplified backend
+                try {
+                    const tl = String(scanResult?.threat_level || '').toUpperCase();
+                    if (tl && tl !== 'SAFE') {
+                        addFoundVuln({
+                            title: `URL scan: ${scanResult?.url || 'unknown'} (${tl})`,
+                            type: 'url',
+                            severity: tl,
+                            source: 'scan-url',
+                            reference: scanResult?.url || null,
+                            details: {
+                                risk_score: scanResult?.risk_score,
+                                liveness: scanResult?.liveness_check,
+                                resolved_ips: Array.isArray(scanResult?.resolved_ips) ? scanResult.resolved_ips.slice(0, 5) : []
+                            }
+                        });
+                    }
+                } catch (_) {}
                 res.json(scanResult);
             } catch (parseError) {
                 console.error("Error parsing Python script output:", parseError);
@@ -224,6 +424,26 @@ app.post("/api/scan-file", upload.single("file"), async (req, res) => {
             try {
                 const scanResult = JSON.parse(scriptOutput);
                 // Skipping DB save in simplified backend
+                try {
+                    const tl = String(scanResult?.threat_level || '').toUpperCase();
+                    const yaraCount = (scanResult?.indicators?.yara_match_count) || 0;
+                    const clam = (scanResult?.clamav || {}).status;
+                    const isMal = !!scanResult?.malicious || tl === 'HIGH' || tl === 'MEDIUM' || yaraCount > 0 || clam === 'infected';
+                    if (isMal) {
+                        addFoundVuln({
+                            title: `File scan: ${scanResult?.filename || 'unknown'} (${tl || (clam==='infected'?'INFECTED':'SUSPECT')})`,
+                            type: 'file',
+                            severity: tl || (clam==='infected'?'HIGH':'LOW'),
+                            source: 'scan-file',
+                            reference: scanResult?.hashes?.sha256 || scanResult?.sha256 || null,
+                            details: {
+                                risk_score: scanResult?.risk_score,
+                                yara_matches: scanResult?.yara?.matches || [],
+                                clamav: scanResult?.clamav || {},
+                            }
+                        });
+                    }
+                } catch (_) {}
                 res.json(scanResult);
             } catch (parseError) {
                 console.error("Error parsing Python script output:", parseError);
@@ -288,6 +508,23 @@ app.post("/api/scan-log", upload.single("file"), async (req, res) => {
             if (code === 0) {
                 try {
                     const scanResult = JSON.parse(scriptOutput);
+                    try {
+                        const tl = String(scanResult?.threat_level || '').toUpperCase();
+                        const susHits = Array.isArray(scanResult?.detections?.suspicious_patterns) ? scanResult.detections.suspicious_patterns.length : 0;
+                        if (tl && tl !== 'SAFE' || susHits > 0) {
+                            addFoundVuln({
+                                title: `Log scan: ${tl || 'ANALYZED'} (${susHits} suspicious hits)`,
+                                type: 'log',
+                                severity: tl || 'LOW',
+                                source: 'scan-log',
+                                reference: null,
+                                details: {
+                                    risk_score: scanResult?.risk_score,
+                                    suspicious_count: susHits
+                                }
+                            });
+                        }
+                    } catch (_) {}
                     return res.json(scanResult);
                 } catch (parseError) {
                     console.error("Error parsing Python script output:", parseError);

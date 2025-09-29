@@ -5,6 +5,8 @@ import AnalyzeFile from './Components/AnalyzeFile';
 import AnalyzeURL from './Components/AnalyzeURL';
 import AnalyzeLog from './Components/AnalyzeLog';
 import News from './Components/News';
+import Vulnerabilities from './Components/Vulnerabilities';
+import HashGenerator from './Components/HashGenerator';
 import About from './Components/About';
 import Contact from './Components/Contact';
 import Chatbot from './Components/Chatbot';
@@ -22,6 +24,8 @@ function App() {
           <Route path="/AnalyzeURL" element={<AnalyzeURL />} />
           <Route path="/AnalyzeLog" element={<AnalyzeLog />} />
           <Route path="/News" element={<News />} />
+          <Route path="/Vulnerabilities" element={<Vulnerabilities />} />
+          <Route path="/HashGenerator" element={<HashGenerator />} />
           <Route path="/About" element={<About />} />
           <Route path="/Contact" element={<Contact />} />
         </Routes>
