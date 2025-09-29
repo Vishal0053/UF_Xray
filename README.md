@@ -4,19 +4,32 @@
 
 ### 1. Backend Setup
 
-1. Copy .env.example to .env in the server/ directory:
-   `ash
+1. Copy `.env.example` to `.env` in the `server/` directory:
+
+   Windows (PowerShell):
+
+   ```powershell
    cd server
    copy .env.example .env
-   ``n
-2. Edit server/.env and replace <db_password> with your MongoDB Atlas password.
+   ```
+
+   macOS/Linux:
+
+   ```bash
+   cd server
+   cp .env.example .env
+   ```
+
+2. Edit `server/.env` and replace `<db_password>` with your MongoDB Atlas password (only needed if using the full DB/auth stack).
 
 3. Install dependencies and start the backend:
-   `ash
+
+   ```bash
    cd server
-n   npm install
+   npm install
    npm start
-   ``n
+   ```
+
    You should see server start logs, e.g. "Server running on port 5000".
 
 #### Chatbot (Cybersecurity Assistant) Setup
@@ -27,6 +40,8 @@ n   npm install
    OPENAI_API_KEY=sk-...
    # Optional (default is gpt-4o-mini)
    OPENAI_MODEL=gpt-4o-mini
+   # Optional rate limit (requests per minute; default 30)
+   CHAT_RATE_LIMIT=30
    ```
 
 2. Restart the backend after setting the key: `npm start`
@@ -34,25 +49,45 @@ n   npm install
 ### 2. Frontend Setup
 
 1. Install dependencies:
-   `ash
+
+   ```bash
    npm install
-   ``n
+   ```
+
 2. Start the development server:
-   `ash
+
+   ```bash
    npm start
-   ``n
+   ```
+
    The app will open at http://localhost:3000
 
 When the backend is running (default http://localhost:5000), click the floating "Chatbot" button at the bottom-right to ask cybersecurity questions.
+
+### 2b. Docs PDF Export
+
+The repository includes printable HTML docs in `docs/` and a script to export them to PDF using Puppeteer.
+
+Run:
+
+```bash
+npm run docs:pdf
+```
+
+Outputs will be generated in `docs/pdf/`:
+
+- `docs/pdf/UF_Xray_Viva_Guide.pdf`
+- `docs/pdf/UF_Xray_Deployment_Guide.pdf`
 
 ### 3. Production Deployment
 
 #### Frontend (GitHub Pages)
 
 1. Deploy to GitHub Pages:
-   `ash
+   
+   ```bash
    npm run deploy
-   ``n
+   ```
 2. Your site will be live at: https://vishal0053.github.io/UF_Xray/
 
 #### Backend (Optional - for production)
@@ -61,11 +96,22 @@ When the backend is running (default http://localhost:5000), click the floating 
 2. Set environment variables on your hosting platform (Render):
    - `OPENAI_API_KEY` (required)
    - `OPENAI_MODEL` (optional, default `gpt-4o-mini`)
+   - `CHAT_RATE_LIMIT` (optional, e.g., `30` requests/min)
 3. Update frontend to use production backend:
-   `ash
+   
+   Windows (PowerShell):
+   ```powershell
    setx REACT_APP_API_URL "https://your-backend-url.com"
+   ```
+   macOS/Linux (temporary for one shell session):
+   ```bash
+   export REACT_APP_API_URL="https://your-backend-url.com"
+   ```
+   Then redeploy the frontend:
+   ```bash
    npm run deploy
-   ``n
+   ```
+
 ## Features
 
 - **File Analysis**: Upload and scan files for malware
@@ -101,6 +147,7 @@ When the backend is running (default http://localhost:5000), click the floating 
 - PORT - Server port (default: 5000)
 - OPENAI_API_KEY - OpenAI key used by `/api/chat`
 - OPENAI_MODEL - Optional model override (default: gpt-4o-mini)
+- CHAT_RATE_LIMIT - Optional rate limit for `/api/chat` requests per minute (default: 30)
 
 ### Frontend
 - REACT_APP_API_URL - Backend API URL (for production)

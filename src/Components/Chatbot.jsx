@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { askCyberChat } from '../api';
+import { askCyberChat } from '../utils/api';
 
 const Chatbot = () => {
   const [open, setOpen] = useState(false);
@@ -26,7 +26,18 @@ const Chatbot = () => {
       setMessages((prev) => [...prev, { role: 'assistant', content: answer || "I couldn't generate a response." }]);
     } catch (e) {
       console.error('Chat error', e);
-      setMessages((prev) => [...prev, { role: 'assistant', content: 'Sorry, there was an error contacting the assistant.' }]);
+      let msg = 'Sorry, there was an error contacting the assistant.';
+      try {
+        const serverMsg = e?.response?.data?.message || e?.message;
+        if (typeof serverMsg === 'string' && serverMsg.trim()) {
+          if (serverMsg.includes('OPENAI_API_KEY')) {
+            msg = 'Assistant server is not configured (missing OPENAI_API_KEY). Please set it on the server and restart.';
+          } else {
+            msg = `Error: ${serverMsg}`;
+          }
+        }
+      } catch { /* noop */ }
+      setMessages((prev) => [...prev, { role: 'assistant', content: msg }]);
     } finally {
       setLoading(false);
       setTimeout(() => {
@@ -55,7 +66,7 @@ const Chatbot = () => {
           }}
           aria-label="Open chatbot"
         >
-          Chatbot
+          Ask me!
         </button>
       )}
 

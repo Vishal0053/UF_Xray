@@ -34,13 +34,39 @@ function pickImageFromItem(item) {
         if (url && /\.(png|jpe?g|gif|webp|svg)(\?|$)/i.test(url)) return url;
       }
     }
-    // 3) content or content:encoded <img src="...">
-    const html = item['content:encoded'] || item.content || '';
-    const m = /<img[^>]+src=["']([^"'>]+)["']/i.exec(html);
+    // 3) content or content:encoded: try several attributes
+    const html = String(item['content:encoded'] || item.content || '');
+    // a) src
+    let m = /<img[^>]+src=["']([^"'>]+)["']/i.exec(html);
     if (m && m[1]) return m[1];
+    // b) data-* common lazy attributes
+    m = /<img[^>]+data-(?:src|lazy-src|original)=["']([^"'>]+)["']/i.exec(html);
+    if (m && m[1]) return m[1];
+    // c) srcset on <img> or <source>
+    m = /<(?:img|source)[^>]+srcset=["']([^"'>]+)["']/i.exec(html);
+    if (m && m[1]) {
+      // pick the first URL before a space or comma
+      const first = m[1].split(',')[0].trim().split(' ')[0].trim();
+      if (first) return first;
+    }
   } catch (_) {}
   // fallback
   return 'https://source.unsplash.com/featured/800x450?cyber,security,hacking,news';
+}
+
+function absolutizeUrl(url, base) {
+  try {
+    if (!url) return null;
+    // Handle protocol-relative URLs (e.g., //example.com/x.png)
+    if (typeof url === 'string' && url.startsWith('//')) {
+      return 'https:' + url;
+    }
+    const u = new URL(url, base);
+    if (u.protocol === 'http:' || u.protocol === 'https:') return u.toString();
+    return null;
+  } catch (_) {
+    return null;
+  }
 }
 
 async function fetchAll() {
@@ -50,7 +76,9 @@ async function fetchAll() {
       const data = await parser.parseURL(feed.url);
       for (const item of (data.items || [])) {
         const pub = item.isoDate || item.pubDate || null;
-        const imageUrl = pickImageFromItem(item);
+        const picked = pickImageFromItem(item);
+        const imageUrl = absolutizeUrl(picked, item.link || feed.url) ||
+          'https://source.unsplash.com/featured/800x450?cyber,security,hacking,news';
         results.push({
           title: item.title || '(no title)',
           link: item.link,
@@ -73,9 +101,10 @@ async function fetchAll() {
   return results;
 }
 
-async function getNews(limit = 20) {
+async function getNews(limit = 20, options = {}) {
+  const { nocache = false } = options || {};
   const now = Date.now();
-  if (cache.items.length && (now - cache.fetchedAt) < CACHE_TTL_MS) {
+  if (!nocache && cache.items.length && (now - cache.fetchedAt) < CACHE_TTL_MS) {
     return cache.items.slice(0, limit);
   }
   const items = await fetchAll();

@@ -7,6 +7,7 @@ const fs = require("fs");
 // const mongoose = require("mongoose");
 const path = require("path");
 const dotenv = require("dotenv");
+const rateLimit = require('express-rate-limit');
 const { getNews } = require("./news");
 // const authRoutes = require("./routes/auth");
 // const jwt = require("jsonwebtoken");
@@ -17,6 +18,28 @@ const { getNews } = require("./news");
 dotenv.config();
 
 const app = express();
+const FALLBACK_SVG = (
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'>`+
+  `<rect width='800' height='450' fill='rgb(15,23,42)'/>`+
+  `<rect x='340' y='170' rx='12' ry='12' width='120' height='100' fill='rgba(96,165,250,0.15)' stroke='rgb(96,165,250)' stroke-width='8'/>`+
+  `<path d='M360 170 v-20 a40 40 0 0 1 80 0 v20' fill='none' stroke='rgb(147,197,253)' stroke-width='8'/>`+
+  `<text x='400' y='320' font-size='28' fill='rgb(203,213,225)' text-anchor='middle' font-family='Segoe UI,Roboto,Arial,sans-serif'>Cyber Security</text>`+
+  `</svg>`
+);
+function sendFallback(res) {
+  if (!res.headersSent) {
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.status(200).send(FALLBACK_SVG);
+  }
+}
+// Basic rate limiter to protect upstream AI API and server
+const chatLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  limit: parseInt(process.env.CHAT_RATE_LIMIT || '30', 10), // 30 req/min by default
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 // Ensure global fetch is available (Node < 18 fallback)
 async function ensureFetch() {
   if (typeof fetch === 'undefined') {
@@ -49,42 +72,60 @@ app.get('/api/news-image', (req, res) => {
         if (!src || typeof src !== 'string') {
             return res.status(400).send('src query param required');
         }
-        let target;
-        try { target = new URL(src); } catch { return res.status(400).send('invalid url'); }
-        if (target.protocol !== 'http:' && target.protocol !== 'https:') {
-            return res.status(400).send('unsupported protocol');
+        let start;
+        try { start = new URL(src); } catch { return sendFallback(res); }
+        if (start.protocol !== 'http:' && start.protocol !== 'https:') {
+            return sendFallback(res);
         }
-        const client = target.protocol === 'http:' ? require('http') : require('https');
 
-        const request = client.get(target.toString(), {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36',
-                'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-                'Referer': target.origin
-            },
-            timeout: 10000,
-        }, (r) => {
-            if (r.statusCode && r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) {
-                // Let browser follow redirect
+        const visited = new Set();
+        const MAX_REDIRECTS = 5;
+
+        const fetchAndPipe = (target, redirectsLeft) => {
+            const client = target.protocol === 'http:' ? require('http') : require('https');
+            const request = client.get(target.toString(), {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36',
+                    'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                    'Referer': target.origin
+                },
+                timeout: 10000,
+            }, (r) => {
+                // Follow redirects server-side
+                if (r.statusCode && r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) {
+                    if (redirectsLeft <= 0) return sendFallback(res);
+                    let nextUrl;
+                    try { nextUrl = new URL(r.headers.location, target); } catch { return sendFallback(res); }
+                    const key = nextUrl.toString();
+                    if (visited.has(key)) return res.status(508).send('redirect loop');
+                    visited.add(key);
+                    r.resume(); // discard data
+                    return fetchAndPipe(nextUrl, redirectsLeft - 1);
+                }
+                if (r.statusCode && r.statusCode >= 400) {
+                    return sendFallback(res);
+                }
                 res.setHeader('Cache-Control', 'public, max-age=86400');
-                return res.redirect(302, r.headers.location);
-            }
-            if (r.statusCode && r.statusCode >= 400) {
-                return res.status(502).send('bad upstream');
-            }
-            res.setHeader('Cache-Control', 'public, max-age=86400');
-            if (r.headers['content-type']) res.setHeader('Content-Type', r.headers['content-type']);
-            r.on('error', () => res.status(502).end());
-            r.pipe(res);
-        });
+                const ct = r.headers['content-type'] || '';
+                if (!ct.toLowerCase().startsWith('image/')) {
+                    r.resume(); // discard non-image
+                    return sendFallback(res);
+                }
+                res.setHeader('Content-Type', ct);
+                r.on('error', () => res.status(502).end());
+                r.pipe(res);
+            });
 
-        request.on('timeout', () => {
-            request.destroy();
-            res.status(504).send('timeout');
-        });
-        request.on('error', () => {
-            res.status(502).send('fetch error');
-        });
+            request.on('timeout', () => {
+                request.destroy();
+                sendFallback(res);
+            });
+            request.on('error', () => {
+                sendFallback(res);
+            });
+        };
+
+        fetchAndPipe(start, MAX_REDIRECTS);
     } catch (e) {
         res.status(500).send('proxy error');
     }
@@ -275,7 +316,8 @@ app.get("/api/news", async (req, res) => {
     try {
         const limitRaw = req.query.limit || '12';
         const limit = Math.max(1, Math.min(parseInt(limitRaw, 10) || 12, 50));
-        const items = await getNews(limit);
+        const nocache = String(req.query.nocache || '').toLowerCase();
+        const items = await getNews(limit, { nocache: nocache === '1' || nocache === 'true' });
         return res.json({ items });
     } catch (e) {
         console.error("/api/news error:", e);
@@ -289,7 +331,7 @@ app.get("/api/news", async (req, res) => {
 // Legacy scan endpoint removed. Use /api/scan-url or /api/scan-file
 
 // Chatbot endpoint for cybersecurity Q&A
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', chatLimiter, async (req, res) => {
     try {
         await ensureFetch();
         const { message, history } = req.body || {};

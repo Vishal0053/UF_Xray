@@ -9,11 +9,11 @@ export default function News() {
   const [error, setError] = useState(null);
   const [limit, setLimit] = useState(24);
 
-  const fetchNews = async (lim = limit) => {
+  const fetchNews = async (lim = limit, force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await api.get(`/api/news?limit=${lim}`);
+      const { data } = await api.get(`/api/news?limit=${lim}${force ? '&nocache=1' : ''}`);
       setItems(data?.items || []);
     } catch (e) {
       setError(e.message || 'Failed to load news');
@@ -46,7 +46,7 @@ export default function News() {
               ))}
             </select>
             <button
-              onClick={() => fetchNews(limit)}
+              onClick={() => fetchNews(limit, true)}
               className="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
               disabled={loading}
             >
@@ -65,7 +65,7 @@ export default function News() {
               <div className="aspect-video w-full bg-gray-100 overflow-hidden -mb-px rounded-t-2xl">
                 {it ? (
                   <img
-                    src={(it.imageUrl || '').startsWith('http://')
+                    src={(it.imageUrl || '').startsWith('http')
                       ? `${process.env.REACT_APP_API_URL || ''}/api/news-image?src=${encodeURIComponent(it.imageUrl)}`
                       : (it.imageUrl || FALLBACK_IMG)}
                     alt={it.title || 'news image'}

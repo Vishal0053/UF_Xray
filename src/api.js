@@ -1,9 +1,14 @@
 import axios from 'axios';
 
-export const API_BASE_URL = (process.env.REACT_APP_API_URL
-  || (typeof window !== 'undefined' && window.location.hostname === 'localhost'
-      ? 'http://localhost:5000'
-      : '')) || '';
+export const API_BASE_URL = (() => {
+  const envBase = process.env.REACT_APP_API_URL && process.env.REACT_APP_API_URL.trim();
+  if (envBase) return envBase;
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname === 'localhost') return 'http://localhost:5000';
+    return 'https://uf-xray-api.onrender.com';
+  }
+  return '';
+})();
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
