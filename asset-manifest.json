@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/UF_Xray/static/css/main.ead54755.css",
-    "main.js": "/UF_Xray/static/js/main.6fdcbb34.js",
+    "main.css": "/UF_Xray/static/css/main.9aa2d275.css",
+    "main.js": "/UF_Xray/static/js/main.939cfc6b.js",
     "static/js/239.d9f5cc2e.chunk.js": "/UF_Xray/static/js/239.d9f5cc2e.chunk.js",
     "static/js/213.11bc091b.chunk.js": "/UF_Xray/static/js/213.11bc091b.chunk.js",
     "static/js/455.895e196f.chunk.js": "/UF_Xray/static/js/455.895e196f.chunk.js",
@@ -11,15 +11,15 @@
     "static/media/logo-r.png": "/UF_Xray/static/media/logo-r.456c6251d61e4b6ea6e0.png",
     "static/media/dummy-img-female.png": "/UF_Xray/static/media/dummy-img-female.aabdfd94b13fed3b49c8.png",
     "index.html": "/UF_Xray/index.html",
-    "main.ead54755.css.map": "/UF_Xray/static/css/main.ead54755.css.map",
-    "main.6fdcbb34.js.map": "/UF_Xray/static/js/main.6fdcbb34.js.map",
+    "main.9aa2d275.css.map": "/UF_Xray/static/css/main.9aa2d275.css.map",
+    "main.939cfc6b.js.map": "/UF_Xray/static/js/main.939cfc6b.js.map",
     "239.d9f5cc2e.chunk.js.map": "/UF_Xray/static/js/239.d9f5cc2e.chunk.js.map",
     "213.11bc091b.chunk.js.map": "/UF_Xray/static/js/213.11bc091b.chunk.js.map",
     "455.895e196f.chunk.js.map": "/UF_Xray/static/js/455.895e196f.chunk.js.map",
     "453.453f2ef2.chunk.js.map": "/UF_Xray/static/js/453.453f2ef2.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.ead54755.css",
-    "static/js/main.6fdcbb34.js"
+    "static/css/main.9aa2d275.css",
+    "static/js/main.939cfc6b.js"
   ]
 }
