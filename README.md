@@ -141,20 +141,25 @@ Outputs will be generated in `docs/pdf/`:
 
 ## Environment Variables
 
-### Backend (.env)
 - MONGODB_URI - MongoDB connection string
 - JWT_SECRET - Secret key for JWT tokens
 - PORT - Server port (default: 5000)
 - OPENAI_API_KEY - OpenAI key used by `/api/chat`
 - OPENAI_MODEL - Optional model override (default: gpt-4o-mini)
-- CHAT_RATE_LIMIT - Optional rate limit for `/api/chat` requests per minute (default: 30)
+  - CHAT_RATE_LIMIT - Optional rate limit for `/api/chat` requests per minute (default: 30)
 
 ### Frontend
 - REACT_APP_API_URL - Backend API URL (for production)
+
+## Security News & Images
+
+- **Endpoint**: The frontend calls `GET /api/news` from the backend to fetch cybersecurity headlines from multiple RSS feeds.
+- **Dynamic images**: Article images are resolved server-side from RSS `enclosure`, `media:content`, or embedded HTML. The frontend proxies all `http(s)` image URLs via `GET /api/news-image?src=...` to avoid mixed-content and CORS issues.
+- **Fallback image**: If an article doesn't provide a valid image or the image fails to load, the app shows a local placeholder at `public/cyber-fallback.svg`. This works on GitHub Pages because components reference it via `process.env.PUBLIC_URL + '/cyber-fallback.svg'`.
+- **Config**: Ensure the backend URL is set via `REACT_APP_API_URL` for production (see `.env.production`). In local dev, the app defaults to `http://localhost:5000`.
 
 ## Troubleshooting
 
 1. **MongoDB Connection Issues**: Check your connection string and network access
 2. **CORS Errors**: Ensure backend is running on port 5000
 3. **Build Errors**: Check for missing dependencies
-4. **Deployment Issues**: Verify environment variables are set correctly

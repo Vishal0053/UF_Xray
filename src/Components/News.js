@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { api } from "../utils/api";
+import { api, API_BASE_URL } from "../utils/api";
 
-const FALLBACK_IMG = 'https://source.unsplash.com/featured/800x450?cyber,security,hacking,news';
+const FALLBACK_IMG = (process.env.PUBLIC_URL || '') + '/cyber-fallback.svg';
 
 export default function News() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [limit, setLimit] = useState(24);
+  const [failed, setFailed] = useState({}); // map of raw imageUrl -> true
 
   const fetchNews = async (lim = limit, force = false) => {
     setLoading(true);
@@ -15,6 +16,8 @@ export default function News() {
     try {
       const { data } = await api.get(`/api/news?limit=${lim}${force ? '&nocache=1' : ''}`);
       setItems(data?.items || []);
+      // reset failed map on new data to avoid stale flags
+      setFailed({});
     } catch (e) {
       setError(e.message || 'Failed to load news');
     } finally {
@@ -26,6 +29,16 @@ export default function News() {
     fetchNews(limit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [limit]);
+
+  const resolveImageSrc = (it) => {
+    const raw = (it?.imageUrl || '').trim();
+    if (!raw) return FALLBACK_IMG;
+    if (failed[raw]) return FALLBACK_IMG;
+    if (raw.startsWith('http')) {
+      return `${API_BASE_URL}/api/news-image?src=${encodeURIComponent(raw)}`;
+    }
+    return raw || FALLBACK_IMG;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-12 px-4 isolate text-gray-900">
@@ -65,12 +78,17 @@ export default function News() {
               <div className="aspect-video w-full bg-gray-100 overflow-hidden -mb-px rounded-t-2xl">
                 {it ? (
                   <img
-                    src={(it.imageUrl || '').startsWith('http')
-                      ? `${process.env.REACT_APP_API_URL || ''}/api/news-image?src=${encodeURIComponent(it.imageUrl)}`
-                      : (it.imageUrl || FALLBACK_IMG)}
+                    src={resolveImageSrc(it)}
                     alt={it.title || 'news image'}
                     className="block w-full h-full object-cover group-hover:scale-[1.02] transition-transform"
-                    onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    data-raw={(it.imageUrl || '').trim()}
+                    onError={(e) => {
+                      const raw = e.currentTarget.getAttribute('data-raw') || '';
+                      e.currentTarget.src = FALLBACK_IMG;
+                      if (raw) setFailed(prev => ({ ...prev, [raw]: true }));
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-gray-100 to-white" />

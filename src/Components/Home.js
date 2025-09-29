@@ -1,12 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from "react-router-dom";
-import { api } from "../utils/api";
+import { api, API_BASE_URL } from "../utils/api";
 import '../App.css';
 
 export default function Container1() {
     const [news, setNews] = useState([]);
     const [newsLoading, setNewsLoading] = useState(false);
     const [newsError, setNewsError] = useState(null);
+    const FALLBACK_IMG = (process.env.PUBLIC_URL || '') + '/cyber-fallback.svg';
+
+    const resolveImage = (it) => {
+        const raw = (it?.imageUrl || '').trim();
+        if (!raw) return FALLBACK_IMG;
+        if (raw.toLowerCase().startsWith('http')) {
+            return `${API_BASE_URL}/api/news-image?src=${encodeURIComponent(raw)}`;
+        }
+        return raw;
+    };
 
     const fetchNews = async () => {
         setNewsLoading(true);
@@ -86,12 +96,11 @@ export default function Container1() {
                             <div className="aspect-video w-full bg-gray-100 overflow-hidden -mb-px">
                                 {item ? (
                                     <img
-                                      src={(item.imageUrl || '').startsWith('http://')
-                                        ? `${process.env.REACT_APP_API_URL || ''}/api/news-image?src=${encodeURIComponent(item.imageUrl)}`
-                                        : (item.imageUrl || 'https://source.unsplash.com/featured/800x450?cyber,security,hacking,news')}
+                                      src={resolveImage(item)}
                                       alt={item.title || 'news image'}
                                       className="block w-full h-full object-cover group-hover:scale-[1.02] transition-transform"
-                                      onError={(e) => { e.currentTarget.src = 'https://source.unsplash.com/featured/800x450?cyber,security,hacking,news'; }}
+                                      referrerPolicy="no-referrer"
+                                      onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }}
                                     />
                                 ) : (
                                     <div className="w-full h-full bg-gradient-to-br from-gray-100 to-white" />
