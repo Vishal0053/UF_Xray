@@ -126,6 +126,13 @@ export default function Navbar() {
                     </Link>
                     <Link
                       className="block px-2 py-2 rounded-lg hover:bg-blue-50"
+                      to="/Vulnerabilities"
+                      onClick={() => { setIsScanMobileOpen(false); setIsMenuOpen(false); }}
+                    >
+                      Vulnerabilities
+                    </Link>
+                    <Link
+                      className="block px-2 py-2 rounded-lg hover:bg-blue-50"
                       to="/HashGenerator"
                       onClick={() => { setIsScanMobileOpen(false); setIsMenuOpen(false); }}
                     >
@@ -136,10 +143,7 @@ export default function Navbar() {
               </li>
               <li>
                 <Link className="block px-2 py-2 rounded-lg hover:bg-blue-50" to="/About" onClick={() => setIsMenuOpen(false)}>About Us</Link>
-              </li>
-              <li>
-                <Link className="block px-2 py-2 rounded-lg hover:bg-blue-50" to="/Vulnerabilities" onClick={() => setIsMenuOpen(false)}>Vulnerabilities</Link>
-              </li>
+              </li>          
               <li>
                 <Link className="block px-2 py-2 rounded-lg hover:bg-blue-50" to="/Contact" onClick={() => setIsMenuOpen(false)}>Contact</Link>
               </li>
