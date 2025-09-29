@@ -126,13 +126,6 @@ export default function Navbar() {
                     </Link>
                     <Link
                       className="block px-2 py-2 rounded-lg hover:bg-blue-50"
-                      to="/Vulnerabilities"
-                      onClick={() => { setIsScanMobileOpen(false); setIsMenuOpen(false); }}
-                    >
-                      Vulnerabilities
-                    </Link>
-                    <Link
-                      className="block px-2 py-2 rounded-lg hover:bg-blue-50"
                       to="/HashGenerator"
                       onClick={() => { setIsScanMobileOpen(false); setIsMenuOpen(false); }}
                     >
